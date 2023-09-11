@@ -1,53 +1,57 @@
 from rest_framework import serializers
-from .models import Person , Document
-import re  # Import Python's regular expression module
+from .models import  Document
+from django.core import validators
+from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
+from django.http import Http404
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Person
-        fields = ['id', 'mobile_number', 'password']
+import re 
 
-    def validate_mobile_number(self, value):
-        # Check if mobile_number is 10 digits
-        if not re.match(r'^\d{10}$', value):
-            raise serializers.ValidationError("Mobile number must be 10 digits.")
-        
-        # Check if the mobile_number is unique
-        if Person.objects.filter(mobile_number=value).exists():
-            raise serializers.ValidationError("Mobile number already in use.")
-        
-        return value
+class UserSerializer(serializers.Serializer):
+    phoneNumber=serializers.CharField(validators=[
+        validators.RegexValidator(
+            regex='^\d{10}$',
+            message='Mobile number must be 10 digits long.',
+            code='invalid_mobile_number'
+        ),
+    ])
+    password=serializers.CharField()
 
+    def validate(self,data):
+        if data['phoneNumber']:
+            if User.objects.filter(username=data['phoneNumber']).exists():
+                raise serializers.ValidationError("phone number already exists")
+            
+        return data
     def validate_password(self, value):
-        # Check if password is at least 8 characters long
         if len(value) < 8:
-            raise serializers.ValidationError("Password must be at least 8 characters long.")
-
-        # Check if password contains at least one alphabet, one number, and one special character
+            raise ValidationError("Password must be at least 8 characters long.")
         if not any(char.isalpha() for char in value) or \
            not any(char.isdigit() for char in value) or \
-           not any(char in "!@#$%^&*()_+{}[];:'\"<>,.?/" for char in value):
-            raise serializers.ValidationError("Password must contain at least one alphabet, one number, and one special character.")
-        
+           not any(char in "!@#$%^&*()_-+=<>?/[]{}" for char in value):
+            raise ValidationError("Password must contain at least one alphabet, one number, and one special character.")
+
         return value
 
+    def create(self, validated_data):
+        user=User.objects.create_user(username=validated_data['phoneNumber'], password=validated_data['password'])
+        user.save()
+
+        return validated_data
+
 class UserLoginSerializer(serializers.Serializer):
-    mobile_number = serializers.CharField(max_length=10)
+    phoneNumber = serializers.CharField(max_length=10)
     password = serializers.CharField(max_length=128, write_only=True)
 
-class UserListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Person
-        fields = ['mobile_number']
+
 class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
-        fields = ['id', 'name']
+        fields = ['id', 'name','owner', 'shared_with']
 
     def create(self, validated_data):
-        # Get the authenticated user from the request context
         user = self.context['request'].user
 
-        # Create a new document with the owner set to the authenticated user
         document = Document.objects.create(owner=user, **validated_data)
         return document
+    
