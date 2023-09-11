@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from .models import User
+from .models import Person , Document
 import re  # Import Python's regular expression module
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
+        model = Person
         fields = ['id', 'mobile_number', 'password']
 
     def validate_mobile_number(self, value):
@@ -13,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Mobile number must be 10 digits.")
         
         # Check if the mobile_number is unique
-        if User.objects.filter(mobile_number=value).exists():
+        if Person.objects.filter(mobile_number=value).exists():
             raise serializers.ValidationError("Mobile number already in use.")
         
         return value
@@ -37,5 +37,17 @@ class UserLoginSerializer(serializers.Serializer):
 
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
+        model = Person
         fields = ['mobile_number']
+class DocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document
+        fields = ['id', 'name']
+
+    def create(self, validated_data):
+        # Get the authenticated user from the request context
+        user = self.context['request'].user
+
+        # Create a new document with the owner set to the authenticated user
+        document = Document.objects.create(owner=user, **validated_data)
+        return document
