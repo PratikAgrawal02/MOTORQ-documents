@@ -14,6 +14,10 @@ from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 from rest_framework.authtoken.models import Token  
+from drf_yasg.utils import swagger_auto_schema
+@swagger_auto_schema(
+    method='post',
+)
 
 class UserSignupView(APIView):
     def post(self, request, format=None):
