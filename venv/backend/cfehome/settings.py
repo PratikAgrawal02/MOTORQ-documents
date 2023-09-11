@@ -133,5 +133,16 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
+SWAGGER_SETTINGS = {
+    'DEFAULT_INFO': 'mysite.api.urls.swagger_info', 
+    'SECURITY_DEFINITIONS': {
+        'basic': {'type': 'apiKey'},
+        'api_key': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization'
+        }
+    },
+    'USE_SESSION_AUTH':False,
+}
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
